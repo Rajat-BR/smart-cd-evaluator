@@ -12,9 +12,7 @@
    of the result card and used for recommendation context.
    ---------------------------------------------------------------- */
 const BRICK_TYPE_STANDARDS = {
-  'Clay Brick (First Class)':       'IS 1077 — Class 1 (≥ 10 MPa)',
-  'Clay Brick (Second Class)':      'IS 1077 — Class 2 (≥ 7.5 MPa)',
-  'Clay Brick (Third Class)':       'IS 1077 — Class 3 (≥ 3.5 MPa)',
+  'Clay Brick':                     'IS 1077 — Class 1/2/3 (auto-classified)',
   'Fly Ash Brick':                  'IS 12894 — (≥ 7.5 MPa)',
   'Concrete Brick / Block':         'IS 2185 — (≥ 5 MPa)',
   'Sand Lime Brick':                'IS 4139 — (≥ 7 MPa)',
@@ -72,17 +70,17 @@ const BRICK_CRITERIA = {
     hint:           'Obtain by placing brick end-up in a shallow water dish, letting water evaporate, and observing salt deposits. Scale: 0 = Nil · 1 = Slight · 2 = Moderate · 3 = Heavy · 4 = Serious'
   },
   dimensionalTolerance: {
-    label:          'Dimensional Tolerance',
-    unit:           'mm',
-    weight:         15,
-    good:           3.0,    /* ≤ 3 mm max deviation from nominal */
-    avg:            6.0,    /* ≤ 6 mm marginal */
-    standard:       'IS 1077: ± 3 mm (Good), ± 6 mm (Marginal)',
-    codeRef:        'IS 1077 (Measurement of Dimensions)',
-    higherIsBetter: false,
-    max:            20,
-    hint:           'Obtain by aligning 20 brick samples in a straight line, measuring overall length, width, and height, and dividing deviation from nominal.'
-  },
+  label:          'Dimensional Tolerance (Avg L/B/H)',
+  unit:           'mm',
+  weight:         15,
+  good:           3.0,
+  avg:            6.0,
+  standard:       'IS 1077: ± 3 mm (Good), ± 6 mm (Marginal)',
+  codeRef:        'IS 1077 (Measurement of Dimensions)',
+  higherIsBetter: false,
+  max:            20,
+  hint:           'Measure Length, Breadth and Height of the brick. The system calculates the average deviation automatically.'
+},  
   hardness: {
     label:          'Hardness (Scratch Test)',
     unit:           '(1–5)',
@@ -129,9 +127,7 @@ function renderBrickForm() {
           <label for="brick_type">Brick Type</label>
           <select id="brick_type">
             <option value="">— Select brick type —</option>
-            <option value="Clay Brick (First Class)">Clay Brick — First Class</option>
-            <option value="Clay Brick (Second Class)">Clay Brick — Second Class</option>
-            <option value="Clay Brick (Third Class)">Clay Brick — Third Class</option>
+            <option value="Clay Brick">Clay Brick</option>
             <option value="Fly Ash Brick">Fly Ash Brick</option>
             <option value="Concrete Brick / Block">Concrete Brick / Block</option>
             <option value="Sand Lime Brick">Sand Lime Brick</option>
@@ -145,24 +141,55 @@ function renderBrickForm() {
       <!-- Parameter input grid — auto-generated from BRICK_CRITERIA -->
       <div class="fields-grid">
 
-        ${Object.entries(BRICK_CRITERIA).map(([key, cfg]) => `
-        <div class="field-group">
-          <label for="brick_${key}">
-            ${cfg.label}
-            <span class="unit">(${cfg.unit})</span>
-            <span class="info-icon-tooltip" data-tooltip="${cfg.hint}">ⓘ</span>
-          </label>
-          <input
-            type="number"
-            id="brick_${key}"
-            step="${key === 'compressiveStrength' || key === 'waterAbsorption' ? '0.1' : '1'}"
-            min="0"
-            max="${cfg.max}"
-            placeholder="e.g. ${_brickPlaceholder(key)}"
-          />
-          <span class="field-hint">${cfg.codeRef}</span>
-        </div>
-        `).join('')}
+        ${Object.entries(BRICK_CRITERIA).map(([key, cfg]) => {
+          if (key === 'dimensionalTolerance') {
+            return `
+            <div class="field-group">
+              <label>
+                Actual Brick Dimensions
+                <span class="unit">(mm)</span>
+                <span class="info-icon-tooltip" data-tooltip="${cfg.hint}">ⓘ</span>
+              </label>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:4px;">
+                <input
+                  type="number" id="brick_dimLength"
+                  step="0.1" min="0" max="20"
+                  placeholder="e.g. 190"
+                />
+                <input
+                  type="number" id="brick_dimBreadth"
+                  step="0.1" min="0" max="20"
+                  placeholder="e.g 90"
+                />
+                <input
+                  type="number" id="brick_dimHeight"
+                  step="0.1" min="0" max="20"
+                  placeholder="e.g. 90"
+                />
+              </div>
+              <span class="field-hint">${cfg.codeRef} &nbsp;·&nbsp; Enter actual measured dimensions in mm (L x B x H)</span>
+            </div>
+            `;
+          }
+          return `
+          <div class="field-group">
+            <label for="brick_${key}">
+              ${cfg.label}
+              <span class="unit">(${cfg.unit})</span>
+              <span class="info-icon-tooltip" data-tooltip="${cfg.hint}">ⓘ</span>
+            </label>
+            <input
+              type="number"
+              id="brick_${key}"
+              step="${key === 'compressiveStrength' || key === 'waterAbsorption' ? '0.1' : '1'}"
+              min="0"
+              max="${cfg.max}"
+              placeholder="e.g. ${_brickPlaceholder(key)}"
+            />
+            <span class="field-hint">${cfg.codeRef}</span>
+          </div>
+          `;
+        }).join('')}
           <div class="upload-zone">
             <label>Sample Photo <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">(optional)</span></label>
             <input
@@ -198,7 +225,6 @@ function _brickPlaceholder(key) {
     compressiveStrength:  '10.5',
     waterAbsorption:      '12',
     efflorescence:        '1',
-    dimensionalTolerance: '2',
     hardness:             '4'
   };
   return defaults[key] || '0';
@@ -226,6 +252,34 @@ function readBrickInputs() {
 
   /* Numeric parameters */
   Object.keys(BRICK_CRITERIA).forEach(key => {
+    if (key === 'dimensionalTolerance') {
+      /* Read three separate fields and average them */
+      const elL = document.getElementById('brick_dimLength');
+      const elB = document.getElementById('brick_dimBreadth');
+      const elH = document.getElementById('brick_dimHeight');
+
+      const rawL = elL ? elL.value.trim() : '';
+      const rawB = elB ? elB.value.trim() : '';
+      const rawH = elH ? elH.value.trim() : '';
+
+      const allFilled = [rawL, rawB, rawH].every(v => v !== '' && !isNaN(parseFloat(v)));
+
+      if (!allFilled) {
+        [elL, elB, elH].forEach(el => el && el.classList.add('invalid'));
+        errors.push('Actual Brick Dimensions — Length, Breadth and Height are all required.');
+      } else {
+        [elL, elB, elH].forEach(el => el && el.classList.remove('invalid'));
+        /* Average of the three deviations */
+        const devL = Math.abs(parseFloat(rawL) - 190);
+        const devB = Math.abs(parseFloat(rawB) - 90);
+        const devH = Math.abs(parseFloat(rawH) - 90);
+        const avg  = (devL + devB + devH) / 3;
+        values.dimensionalTolerance = parseFloat(avg.toFixed(2));
+      }
+      return;
+    }
+
+    /* All other parameters — unchanged */
     const el  = document.getElementById(`brick_${key}`);
     const raw = el ? el.value.trim() : '';
 
@@ -580,6 +634,13 @@ function resetBrickForm() {
   if (typeEl) { typeEl.value = ''; typeEl.classList.remove('invalid'); }
 
   Object.keys(BRICK_CRITERIA).forEach(key => {
+    if (key === 'dimensionalTolerance') {
+      ['brick_dimLength', 'brick_dimBreadth', 'brick_dimHeight'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.value = ''; el.classList.remove('invalid'); }
+      });
+      return;
+    }
     const el = document.getElementById(`brick_${key}`);
     if (el) { el.value = ''; el.classList.remove('invalid'); }
   });

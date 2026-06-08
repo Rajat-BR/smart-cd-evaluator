@@ -103,7 +103,7 @@ const AGGREGATE_CRITERIA = {
     max:            11,
     hint:           'Obtain by measuring the percentage voids in aggregate packed in a cylinder; angularity number = (67 - % solid volume). Higher indicates more angular particles.'
   }
-};
+};p
 
 /* ----------------------------------------------------------------
    SECTION 2: FORM HTML RENDERER
