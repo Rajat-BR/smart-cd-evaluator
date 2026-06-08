@@ -32,6 +32,30 @@ const BRICK_TYPE_STANDARDS = {
      max            — input max attribute
      hint           — helper text under the field
    ---------------------------------------------------------------- */
+
+const BRICK_TYPE_THRESHOLDS = {
+  'Clay Brick': {
+    compressiveStrength: { good: 10.0, avg: 3.5 },
+    waterAbsorption:     { good: 15,   avg: 20  }
+  },
+  'Fly Ash Brick': {
+    compressiveStrength: { good: 7.5, avg: 5.0 },
+    waterAbsorption:     { good: 12,  avg: 15  }
+  },
+  'Concrete Brick / Block': {
+    compressiveStrength: { good: 5.0, avg: 3.5 },
+    waterAbsorption:     { good: 10,  avg: 15  }
+  },
+  'Sand Lime Brick': {
+    compressiveStrength: { good: 7.0, avg: 5.0 },
+    waterAbsorption:     { good: 15,  avg: 20  }
+  },
+  'Recycled / Reclaimed Brick': {
+    compressiveStrength: { good: 3.5, avg: 2.0 },
+    waterAbsorption:     { good: 20,  avg: 25  }
+  }
+};
+
 const BRICK_CRITERIA = {
   compressiveStrength: {
     label:          'Compressive Strength',
@@ -327,8 +351,10 @@ function classifyBrickGrade(values) {
    Returns { key, label, unit, value, status, points, note, cfg }.
    Mirrors evaluateAggregateParameter() and evaluateSteelParameter().
    ---------------------------------------------------------------- */
-function evaluateBrickParameter(key, value) {
+function evaluateBrickParameter(key, value, brickType) {
   const cfg = BRICK_CRITERIA[key];
+  const overrides = BRICK_TYPE_THRESHOLDS[brickType]?.[key];
+  if (overrides) { cfg.good = overrides.good; cfg.avg = overrides.avg; }
   let status, points, note;
 
   if (cfg.higherIsBetter) {
@@ -595,7 +621,7 @@ function evaluateBrick() {
 
   /* Step 2: Evaluate each parameter individually */
   const paramResults = Object.keys(BRICK_CRITERIA).map(key =>
-    evaluateBrickParameter(key, values[key])
+    evaluateBrickParameter(key, values[key], values.brickType)
   );
 
   /* Step 3: Classify IS brick grade */
