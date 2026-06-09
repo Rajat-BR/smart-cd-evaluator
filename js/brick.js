@@ -228,7 +228,18 @@ function renderBrickForm() {
             </div>
           </div>
       </div>
-
+      <div class="field-group full" style="margin-top: 8px;">
+        <label for="brick_description">
+          Description
+          <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">(optional)</span>
+        </label>
+        <textarea
+          id="brick_description"
+          rows="3"
+          placeholder="e.g. Sample collected from 2nd floor demolition debris, north wall section..."
+          style="font-family:var(--font-body); font-size:14px; color:var(--text-primary); background:var(--surface-raised); border:1px solid var(--border); border-radius:var(--radius); padding:9px 12px; width:100%; resize:vertical; outline:none; line-height:1.6;"
+        ></textarea>
+      </div>
       <div class="btn-row">
         <button class="btn-primary" onclick="evaluateBrick()">
           ▶ &nbsp; Evaluate Quality
@@ -320,7 +331,8 @@ function readBrickInputs() {
     alert('Please fill in all required fields:\n\n• ' + errors.join('\n• '));
     return null;
   }
-
+  const descEl = document.getElementById('brick_description');
+  values.description = descEl ? descEl.value.trim() : '';
   return values;
 }
 
@@ -521,6 +533,7 @@ function renderBrickResult(values, paramResults, scoreData, recommendation, bric
   const now     = new Date();
   const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   const stdRef  = BRICK_TYPE_STANDARDS[values.brickType] || 'IS 1077';
+  
 
   document.getElementById('resultMeta').innerHTML = `
     <div class="meta-item">
@@ -543,6 +556,12 @@ function renderBrickResult(values, paramResults, scoreData, recommendation, bric
       <div class="meta-label">Evaluated On</div>
       <div class="meta-value">${dateStr}</div>
     </div>
+    ${values.description ? `
+      <div class="meta-item">
+        <div class="meta-label">Description</div>
+        <div class="meta-value" style="font-family:var(--font-body); font-size:13px;">${values.description}</div>
+      </div>
+    ` : ''}
   `;
 
   /* — Quality badge — */
@@ -691,6 +710,8 @@ function resetBrickForm() {
   clearImageUpload('brick_');
   const rp = document.getElementById('resultPhotoContent');
   if (rp) rp.innerHTML = '';
+  const descEl = document.getElementById('brick_description');
+  if (descEl) descEl.value = '';
 }
 
 /* Called by main.js MODULE_REGISTRY dispatcher when 'brick' is selected */

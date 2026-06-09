@@ -254,7 +254,18 @@ function renderSteelForm() {
             </div>
           </div>
       </div>
-
+      <div class="field-group full" style="margin-top: 8px;">
+        <label for="steel_description">
+          Description
+          <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">(optional)</span>
+        </label>
+        <textarea
+          id="steel_description"
+          rows="3"
+          placeholder="e.g. Sample collected from 2nd floor demolition debris, north wall section..."
+          style="font-family:var(--font-body); font-size:14px; color:var(--text-primary); background:var(--surface-raised); border:1px solid var(--border); border-radius:var(--radius); padding:9px 12px; width:100%; resize:vertical; outline:none; line-height:1.6;"
+        ></textarea>
+      </div>
       <div class="btn-row">
         <button class="btn-primary" onclick="evaluateSteel()">
           ▶ &nbsp; Evaluate Quality
@@ -367,7 +378,8 @@ function readSteelInputs() {
     alert('Please fill in all required fields:\n\n• ' + errors.join('\n• '));
     return null;
   }
-
+  const descEl = document.getElementById('steel_description');
+  values.description = descEl ? descEl.value.trim() : '';
   return values;
 }
 
@@ -592,6 +604,12 @@ function renderSteelResult(values, paramResults, scoreData, recommendation, stee
       <div class="meta-label">Evaluated On</div>
       <div class="meta-value">${dateStr}</div>
     </div>
+    ${values.description ? `
+      <div class="meta-item">
+        <div class="meta-label">Description</div>
+        <div class="meta-value" style="font-family:var(--font-body); font-size:13px;">${values.description}</div>
+      </div>
+    ` : ''}
   `;
 
   /* — Quality badge — */
@@ -732,6 +750,8 @@ function resetSteelForm() {
   clearImageUpload('steel_');
   const rp = document.getElementById('resultPhotoContent');
   if (rp) rp.innerHTML = '';
+  const descEl = document.getElementById('steel_description');
+  if (descEl) descEl.value = '';
 }
 
 /* Called by main.js dispatcher when 'steel' module is selected */
