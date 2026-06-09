@@ -40,6 +40,25 @@ const STEEL_GRADES = {
    Same schema as AGGREGATE_CRITERIA — each parameter defines
    weight, thresholds, standard reference, direction, and hint.
    ---------------------------------------------------------------- */
+const STEEL_ORIGIN_THRESHOLDS = {
+  'New Production Bar': {
+    yieldStrength:   { good: 500, avg: 415 },
+    tensileStrength: { good: 545, avg: 485 }
+  },
+  'Recycled Rebar (C&D Recovery)': {
+    yieldStrength:   { good: 415, avg: 300 },
+    tensileStrength: { good: 485, avg: 370 }
+  },
+  'Reclaimed Structural Steel Bar': {
+    yieldStrength:   { good: 415, avg: 300 },
+    tensileStrength: { good: 485, avg: 370 }
+  },
+  'Secondary Market Rebar': {
+    yieldStrength:   { good: 415, avg: 300 },
+    tensileStrength: { good: 485, avg: 370 }
+  }
+};
+
 const STEEL_CRITERIA = {
   yieldStrength: {
     label:          'Yield Strength (0.2% Proof)',
@@ -87,7 +106,7 @@ const STEEL_CRITERIA = {
     codeRef:        'IS 1786 (Diameter Tolerance Check)',
     higherIsBetter: false,
     max:            5,
-    hint:           'Obtain by measuring the actual rebar diameter at three cross-sections using a vernier caliper.'
+    hint:           'Measure the actual rebar diameter at three cross-sections using a vernier caliper and enter the average.'
   },
   weightPerMeter: {
     label:          'Weight per Metre Deviation',
@@ -99,7 +118,7 @@ const STEEL_CRITERIA = {
     codeRef:        'IS 1786 (Weight per Metre Check)',
     higherIsBetter: false,
     max:            1.0,
-    hint:           'Obtain by weighing a known length of rebar sample (minimum 0.5m) and calculating percentage deviation from nominal weight.'
+    hint:           'Weigh a known length of rebar sample (minimum 0.5m) on a weighing scale and calculate weight per metre (kg/m).'
   }
 };
 
@@ -158,24 +177,69 @@ function renderSteelForm() {
       <!-- Parameter input grid -->
       <div class="fields-grid">
 
-        ${Object.entries(STEEL_CRITERIA).map(([key, cfg]) => `
-        <div class="field-group">
-          <label for="steel_${key}">
-            ${cfg.label}
-            <span class="unit">(${cfg.unit})</span>
-            <span class="info-icon-tooltip" data-tooltip="${cfg.hint}">ⓘ</span>
-          </label>
-          <input
-            type="number"
-            id="steel_${key}"
-            step="0.01"
-            min="0"
-            max="${cfg.max}"
-            placeholder="e.g. ${_steelPlaceholder(key)}"
-          />
-          <span class="field-hint">${cfg.codeRef}</span>
-        </div>
-        `).join('')}
+        ${Object.entries(STEEL_CRITERIA).map(([key, cfg]) => {
+
+          if (key === 'diameterTolerance') {
+            return `
+            <div class="field-group">
+              <label for="steel_actualDia">
+                Actual Measured Diameter
+                <span class="unit">(mm)</span>
+                <span class="info-icon-tooltip" data-tooltip="${cfg.hint}">ⓘ</span>
+              </label>
+              <input
+                type="number"
+                id="steel_actualDia"
+                step="0.01"
+                min="0"
+                max="50"
+                placeholder="e.g. 15.9"
+              />
+              <span class="field-hint">${cfg.codeRef} · Deviation auto-calculated from nominal diameter</span>
+            </div>
+            `;
+          }
+
+          if (key === 'weightPerMeter') {
+            return `
+            <div class="field-group">
+              <label for="steel_actualWeight">
+                Actual Weight per Metre
+                <span class="unit">(kg/m)</span>
+                <span class="info-icon-tooltip" data-tooltip="${cfg.hint}">ⓘ</span>
+              </label>
+              <input
+                type="number"
+                id="steel_actualWeight"
+                step="0.001"
+                min="0"
+                max="10"
+                placeholder="e.g. 1.58"
+              />
+              <span class="field-hint">${cfg.codeRef} · % deviation auto-calculated from theoretical</span>
+            </div>
+            `;
+          }
+
+          return `
+          <div class="field-group">
+            <label for="steel_${key}">
+              ${cfg.label}
+              <span class="unit">(${cfg.unit})</span>
+              <span class="info-icon-tooltip" data-tooltip="${cfg.hint}">ⓘ</span>
+            </label>
+            <input
+              type="number"
+              id="steel_${key}"
+              step="0.01"
+              min="0"
+              max="${cfg.max}"
+              placeholder="e.g. ${_steelPlaceholder(key)}"
+            />
+            <span class="field-hint">${cfg.codeRef}</span>
+          </div>
+          `;
+        }).join('')}
           <div class="upload-zone">
             <label>Sample Photo <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">(optional)</span></label>
             <input
@@ -203,6 +267,14 @@ function renderSteelForm() {
     </div>
   `;
   setupImageUpload('steel_');
+  const nomDiaEl = document.getElementById('steel_nomDia');
+  const actualDiaEl = document.getElementById('steel_actualDia');
+  nomDiaEl.addEventListener('change', () => {
+    const nom = nomDiaEl.value;
+    if (nom) {
+      actualDiaEl.placeholder = `e.g. ${nom} (nominal is ${nom} mm)`;
+    }
+  });
 }
 
 /* Helper: representative placeholder values per parameter */
@@ -247,6 +319,39 @@ function readSteelInputs() {
 
   /* Numeric parameters */
   Object.keys(STEEL_CRITERIA).forEach(key => {
+
+    if (key === 'diameterTolerance') {
+      const el  = document.getElementById('steel_actualDia');
+      const raw = el ? el.value.trim() : '';
+      if (raw === '' || isNaN(parseFloat(raw))) {
+        el && el.classList.add('invalid');
+        errors.push('Actual Measured Diameter is required.');
+      } else if (!values.nominalDiameter) {
+        errors.push('Select Nominal Diameter before entering actual diameter.');
+      } else {
+        el.classList.remove('invalid');
+        const deviation = Math.abs(parseFloat(raw) - values.nominalDiameter);
+        values.diameterTolerance = parseFloat(deviation.toFixed(2));
+      }
+      return;
+    }
+
+    if (key === 'weightPerMeter') {
+      const el  = document.getElementById('steel_actualWeight');
+      const raw = el ? el.value.trim() : '';
+      if (raw === '' || isNaN(parseFloat(raw))) {
+        el && el.classList.add('invalid');
+        errors.push('Actual Weight per Metre is required.');
+      } else {
+        el.classList.remove('invalid');
+        const theoretical = (values.nominalDiameter * values.nominalDiameter) / 162;
+        const pctDeviation = Math.abs((parseFloat(raw) - theoretical) / theoretical) * 100;
+        values.weightPerMeter = parseFloat(pctDeviation.toFixed(2));
+      }
+      return;
+    }
+
+    /* all other parameters unchanged */
     const el  = document.getElementById(`steel_${key}`);
     const raw = el ? el.value.trim() : '';
     if (raw === '' || isNaN(parseFloat(raw))) {
@@ -297,8 +402,10 @@ function classifySteelGrade(values) {
    Same structure as evaluateAggregateParameter() — returns
    { key, label, unit, value, status, points, note, cfg }
    ---------------------------------------------------------------- */
-function evaluateSteelParameter(key, value) {
+function evaluateSteelParameter(key, value, barType) {
   const cfg = STEEL_CRITERIA[key];
+  const overrides = STEEL_ORIGIN_THRESHOLDS[barType]?.[key];
+  if (overrides) { cfg.good = overrides.good; cfg.avg = overrides.avg; }
   let status, points, note;
 
   if (cfg.higherIsBetter) {
@@ -562,7 +669,7 @@ function evaluateSteel() {
 
   /* Step 2: Evaluate each parameter */
   const paramResults = Object.keys(STEEL_CRITERIA).map(key =>
-    evaluateSteelParameter(key, values[key])
+    evaluateSteelParameter(key, values[key], values.barType)
   );
 
   /* Step 3: Classify IS grade */
@@ -597,7 +704,7 @@ function evaluateSteel() {
 
 /* Clear steel form fields and validation states */
 function resetSteelForm() {
-  ['steel_barType', 'steel_nomDia'].forEach(id => {
+  ['steel_barType', 'steel_nomDia', 'steel_actualDia', 'steel_actualWeight'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.value = ''; el.classList.remove('invalid'); }
   });
