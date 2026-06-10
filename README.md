@@ -1,5 +1,7 @@
 # Smart C&D Material Quality Evaluation System
 
+> 🌐 Live Demo: https://rajat-br.github.io/smart-cd-evaluator/
+
 A web-based tool for evaluating the quality and reuse suitability of Construction & Demolition (C&D) waste materials using Indian Standard (IS) code parameters.
 
 ## Features
@@ -29,8 +31,3 @@ A web-based tool for evaluating the quality and reuse suitability of Constructio
 - IS 2386
 - IS 1786
 - IS 432
-
-## Project Structure
-
-text index.html style.css  js/ ├── main.js ├── brick.js ├── aggregate.js ├── steel.js ├── history.js ├── renderer.js ├── scoring.js └── utils.js 
-
