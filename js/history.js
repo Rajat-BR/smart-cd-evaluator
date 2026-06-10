@@ -80,6 +80,11 @@ function saveCurrentSample() {
   }
 
   const { payload, material, subtype, prefix } = _lastEvalPayload;
+
+  const descId = prefix + 'description';
+  const descEl = document.getElementById(descId);
+  const description = descEl ? descEl.value.trim() : '';
+
   const { score, quality, paramResults } = payload;
 
   /* Get photo if available */
@@ -90,12 +95,12 @@ function saveCurrentSample() {
     /* Read photo as base64 then save */
     const reader = new FileReader();
     reader.onload = function (e) {
-      _pushRecord(material, subtype, score, quality, paramResults, e.target.result, file.name);
+      _pushRecord(material, subtype, score, quality, paramResults, e.target.result, file.name, description);
     };
     reader.readAsDataURL(file);
   } else {
     /* Save without photo */
-    _pushRecord(material, subtype, score, quality, paramResults, '', '');
+    _pushRecord(material, subtype, score, quality, paramResults, '', '', description);
   }
 }
 
@@ -104,7 +109,7 @@ function saveCurrentSample() {
  * Builds the record object, pushes to sampleHistory,
  * refreshes UI, and shows the history panel.
  */
-function _pushRecord(material, subtype, score, quality, paramResults, photoDataUrl, photoName) {
+function _pushRecord(material, subtype, score, quality, paramResults, photoDataUrl, photoName, description) {
   const record = {
     sampleNumber: sampleHistory.length + 1,
     date:         getTodayFormatted(),
@@ -114,7 +119,8 @@ function _pushRecord(material, subtype, score, quality, paramResults, photoDataU
     quality,
     photoDataUrl,
     photoName,
-    paramResults
+    paramResults,
+    description: description || ''
   };
 
   sampleHistory.push(record);
@@ -283,7 +289,7 @@ function exportToExcel() {
   const wb = XLSX.utils.book_new();
 
   const ws1 = XLSX.utils.aoa_to_sheet(logRows);
-  _styleColumnWidths(ws1, [6, 14, 16, 28, 8, 10, 24]);
+  _styleColumnWidths(ws1, [6, 14, 16, 28, 8, 10, 24, 40, 24]);
   XLSX.utils.book_append_sheet(wb, ws1, 'Sample Log');
 
   const ws2 = XLSX.utils.aoa_to_sheet(analysisRows);
@@ -315,6 +321,7 @@ function _buildLogRows() {
     '#', 'Date', 'Material', 'Sub-type', 'Score', 'Quality',
     ...paramLabels.map(l => l + ' (Value)'),
     ...paramLabels.map(l => l + ' (Status)'),
+    'Description',
     'Photo Filename'
   ];
 
@@ -336,6 +343,7 @@ function _buildLogRows() {
       r.quality,
       ...paramLabels.map(l => valuesByLabel[l] !== undefined ? valuesByLabel[l] : '—'),
       ...paramLabels.map(l => statusByLabel[l] || '—'),
+      r.description || '',
       r.photoName || 'No photo'
     ];
   });
