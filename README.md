@@ -24,6 +24,10 @@ A web-based tool for evaluating the quality and reuse suitability of Constructio
 ## Supported Standards
 
 - IS 1077
+- IS 12894
+- IS 2185
+- IS 4139
+- IS 383
 - IS 2386
 - IS 1786
-
+- IS 432
